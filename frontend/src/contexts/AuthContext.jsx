@@ -58,8 +58,6 @@ const auth0Config = {
 
 export function AuthProvider({ children }) {
     const [state, dispatch] = useReducer(authReducer, initialState);
-
-    // Initialize Auth0 client
     const auth0Client = new auth0.WebAuth(auth0Config);
 
     // Process authentication result
@@ -75,29 +73,45 @@ export function AuthProvider({ children }) {
             localStorage.setItem('id_token', authResult.idToken);
             localStorage.setItem('expires_at', expiresAt);
 
-            // Get user info
+            // Get user info from Auth0
             auth0Client.client.userInfo(authResult.accessToken, (err, userProfile) => {
                 if (err) {
                     dispatch({ type: 'LOGIN_ERROR', payload: err.message });
                 } else {
-                    // Register user with our backend
-                    fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
-                        method: 'POST',
+                    // First try to get existing user profile
+                    fetch(`${import.meta.env.VITE_API_URL}/api/auth/profile`, {
                         headers: {
-                            'Authorization': `Bearer ${authResult.accessToken}`,
-                            'Content-Type': 'application/json'
+                            'Authorization': `Bearer ${authResult.accessToken}`
                         }
                     })
-                        .then(res => res.json())
+                        .then(res => {
+                            if (res.ok) {
+                                return res.json();
+                            }
+                            if (res.status === 404) {
+                                // User doesn't exist, register them
+                                return fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Authorization': `Bearer ${authResult.accessToken}`,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        email: userProfile.email,
+                                        name: userProfile.name,
+                                        picture: userProfile.picture
+                                    })
+                                }).then(res => {
+                                    if (!res.ok) {
+                                        throw new Error('Registration failed');
+                                    }
+                                    return res.json();
+                                });
+                            }
+                            throw new Error('Profile check failed');
+                        })
                         .then(userData => {
-                            // Set authenticated user state                            // Import and configure API service with token
-                            import('../services/ApiService.js').then(module => {
-                                const apiService = module.default;
-                                apiService.setToken(authResult.accessToken);
-                            }).catch(err => {
-                                console.error('Failed to set token in ApiService:', err);
-                            });
-
+                            // Set authenticated user state
                             dispatch({
                                 type: 'LOGIN_SUCCESS',
                                 payload: {
@@ -108,16 +122,27 @@ export function AuthProvider({ children }) {
                                     token: authResult.accessToken
                                 }
                             });
-                        })
-                        .catch(err => {
-                            dispatch({ type: 'LOGIN_ERROR', payload: 'Failed to register user with backend' });
-                            console.error('Backend registration error:', err);
+
+                            // Configure API service with token
+                            import('../services/ApiService.js').then(module => {
+                                const apiService = module.default;
+                                apiService.setToken(authResult.accessToken);
+                            }).catch(err => {
+                                console.error('Failed to set token in ApiService:', err);
+                            });
+                        }).catch(err => {
+                            console.error('Authentication error:', err);
+                            dispatch({ type: 'LOGIN_ERROR', payload: err.message });
+                            // Remove tokens if authentication fails
+                            localStorage.removeItem('access_token');
+                            localStorage.removeItem('id_token');
+                            localStorage.removeItem('expires_at');
                         });
                 }
             });
         } else if (error) {
+            console.error('Auth0 error:', error);
             dispatch({ type: 'LOGIN_ERROR', payload: error });
-            console.log('Authentication error:', error);
         }
     }, []);
 
@@ -145,16 +170,23 @@ export function AuthProvider({ children }) {
 
     // Check if user is authenticated
     const isAuthenticated = () => {
+        const accessToken = localStorage.getItem('access_token');
+        const idToken = localStorage.getItem('id_token');
         const expiresAt = JSON.parse(localStorage.getItem('expires_at') || '0');
-        return new Date().getTime() < expiresAt;
+        return accessToken && idToken && new Date().getTime() < expiresAt;
     };
 
     useEffect(() => {
         // Check if we have tokens in URL (after Auth0 redirect)
         if (window.location.hash) {
             auth0Client.parseHash((err, authResult) => {
-                handleAuthResult(authResult, err);
-                window.location.hash = '';
+                if (err || !authResult) {
+                    dispatch({ type: 'LOGIN_ERROR', payload: err?.message || 'Authentication failed' });
+                    return;
+                }
+                handleAuthResult(authResult);
+                // Use history API instead of modifying location directly
+                window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
             });
         } else if (isAuthenticated()) {
             // If user is authenticated but state is not set

@@ -27,10 +27,9 @@ const userSchema = new mongoose.Schema({
     lastActive: {
         type: Date,
         default: Date.now
-    },
-    contacts: [{
+    }, contacts: [{
         userId: {
-            type: String,
+            type: String,  // Changed from ObjectId to String since we're using Auth0 IDs
             ref: 'User'
         },
         status: {
@@ -63,10 +62,15 @@ userSchema.statics.getUserContacts = function (userId) {
         });
 };
 
-userSchema.methods.addContact = async function (contactId) {
-    // Check if contact already exists
+userSchema.methods.addContact = async function (auth0Id) {
+    // Get user by auth0Id
+    const contactUser = await this.constructor.findOne({ auth0Id });
+
+    if (!contactUser) {
+        throw new Error('Contact user not found');
+    }    // Check if contact already exists
     const contactExists = this.contacts.find(contact =>
-        contact.userId === contactId
+        contact.userId === auth0Id
     );
 
     if (contactExists) {
@@ -75,7 +79,7 @@ userSchema.methods.addContact = async function (contactId) {
 
     // Add contact
     this.contacts.push({
-        userId: contactId,
+        userId: auth0Id,
         status: 'pending'
     });
 

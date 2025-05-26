@@ -32,9 +32,7 @@ export class UserService {
             console.error('Error updating status:', error);
             return { error: 'Failed to update status' };
         }
-    }
-
-    // Add contact
+    }    // Add contact
     async addContact(contactId) {
         try {
             return await this.api.post('/api/users/contacts', { contactId });
@@ -42,13 +40,21 @@ export class UserService {
             console.error('Error adding contact:', error);
             return { error: 'Failed to add contact' };
         }
-    }    // Get user contacts
+    }
+
+    // Get user contacts
     async getContacts() {
         try {
+            console.log('Making request to /api/users/contacts');
             const contacts = await this.api.get('/api/users/contacts');
+            console.log('Received contacts:', contacts);
             return contacts;
         } catch (error) {
             console.error('Error fetching contacts:', error);
+            if (error.response) {
+                console.error('Response status:', error.response.status);
+                console.error('Response data:', error.response.data);
+            }
             throw error; // Re-throw to allow proper error handling
         }
     }

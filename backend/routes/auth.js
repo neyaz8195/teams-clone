@@ -32,10 +32,10 @@ router.post('/register', jwtCheck, async (req, res) => {
         if (!email || !name) {
             console.error('Missing required user data:', { email, name });
             return res.status(400).json({ error: 'Missing required user data' });
-        }
-
-        // Check if user exists
+        }        // Check if user exists
         let user = await User.findByAuth0Id(auth0Id);
+        console.log('Finding user with auth0Id:', auth0Id);
+        console.log('Existing user found:', user);
 
         if (user) {
             // Update existing user
@@ -43,6 +43,7 @@ router.post('/register', jwtCheck, async (req, res) => {
             user.email = email || user.email;
             user.picture = picture || user.picture;
             await user.save();
+            console.log('Updated existing user:', user);
         } else {
             // Create new user
             user = new User({

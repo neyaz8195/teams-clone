@@ -20,12 +20,19 @@ export default function ChatPage() {
     const fileInputRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(null);
 
+    console.log("socket :::", socket);
+    console.log("token :::", token);
+
     // Initialize services
     useEffect(() => {
         if (socket && token) {
             import('../services/ApiService').then((module) => {
                 const apiService = module.default;
+                console.log('Setting token in ChatPage:', token);
                 apiService.setToken(token);
+
+                // Verify token is set
+                console.log('Verifying token:', apiService.token);
 
                 const chatSvc = new ChatService(socket, apiService);
                 setChatService(chatSvc);
@@ -34,23 +41,23 @@ export default function ChatPage() {
                 setUserService(userSvc);
             });
         }
-    }, [socket, token]);
-
-    // Load contacts
+    }, [socket, token]);    // Load users
     useEffect(() => {
         if (userService) {
-            const loadContacts = async () => {
+            const loadUsers = async () => {
                 try {
-                    const users = await userService.getUsers();
-                    setContacts(users);
+                    const allUsers = await userService.getUsers();
+                    // Filter out the current user
+                    const otherUsers = allUsers.filter(u => u.auth0Id !== user?.userId);
+                    setContacts(otherUsers);
                 } catch (error) {
-                    console.error('Failed to load contacts:', error);
+                    console.error('Failed to load users:', error);
                 }
             };
 
-            loadContacts();
+            loadUsers();
         }
-    }, [userService]);
+    }, [userService, user?.userId]);
 
     // Load messages for selected contact
     useEffect(() => {

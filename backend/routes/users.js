@@ -63,8 +63,15 @@ router.post('/contacts', asyncHandler(async (req, res) => {
         throw errorResponses.notFound('User not found');
     }
 
-    await user.addContact(contactId);
-    res.status(200).json({ message: 'Contact added successfully' });
+    try {
+        await user.addContact(contactId);
+        res.status(200).json({ message: 'Contact added successfully' });
+    } catch (error) {
+        if (error.message === 'Contact user not found') {
+            throw errorResponses.notFound('Contact user not found');
+        }
+        throw error;
+    }
 }));
 
 // Get user contacts

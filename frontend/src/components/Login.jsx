@@ -1,8 +1,36 @@
-import { Box, Button, Typography, Paper, Container } from '@mui/material';
+import { Box, Button, Typography, Paper, Container, CircularProgress } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
+import { Navigate } from 'react-router-dom';
 
 export default function Login() {
-    const { login, loading } = useAuth();
+    const { login, loading, isAuthenticated, error } = useAuth();
+
+    // If already authenticated, redirect to home
+    if (isAuthenticated) {
+        return <Navigate to="/" replace />;
+    }
+
+    // If loading auth state, show loading indicator
+    if (loading) {
+        return (
+            <Container component="main" maxWidth="xs">
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '100vh',
+                    }}
+                >
+                    <CircularProgress />
+                    <Typography variant="body1" sx={{ mt: 2 }}>
+                        Authenticating...
+                    </Typography>
+                </Box>
+            </Container>
+        );
+    }
 
     const handleLogin = () => {
         login();

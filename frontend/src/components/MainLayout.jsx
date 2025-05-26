@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
     AppBar,
     Box,
@@ -215,14 +215,8 @@ export default function MainLayout() {
                     overflow: 'hidden',
                     bgcolor: 'background.default',
                 }}
-            >
-                <Toolbar sx={{ display: { sm: 'none' } }} />
-                <Routes>
-                    <Route path="/" element={<ChatPage />} />
-                    <Route path="/contacts" element={<ContactsPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/video-call" element={<VideoCallPage />} />
-                </Routes>
+            >                <Toolbar sx={{ display: { sm: 'none' } }} />
+                <Outlet />
             </Box>
         </Box>
     );
