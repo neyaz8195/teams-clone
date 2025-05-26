@@ -64,34 +64,36 @@ module.exports = (io) => {
             if (recipientSocketId) {
                 io.to(recipientSocketId).emit('typing:stop', { from: socket.userId });
             }
-        });
-
-        // Handle video call signaling
-        socket.on('call:initiate', (data) => {
+        });        // Handle video call signaling
+        socket.on('call:offer', (data) => {
+            console.log('Received call offer from:', socket.userId, 'to:', data.to);
             const recipientSocketId = users[data.to];
             if (recipientSocketId) {
-                io.to(recipientSocketId).emit('call:incoming', {
+                io.to(recipientSocketId).emit('call:offer', {
                     from: socket.userId,
-                    signal: data.signal
+                    offer: data.offer
                 });
             }
         });
 
-        socket.on('call:accept', (data) => {
+        socket.on('call:answer', (data) => {
+            console.log('Received call answer from:', socket.userId, 'to:', data.to);
             const recipientSocketId = users[data.to];
             if (recipientSocketId) {
-                io.to(recipientSocketId).emit('call:accepted', {
+                io.to(recipientSocketId).emit('call:answer', {
                     from: socket.userId,
-                    signal: data.signal
+                    answer: data.answer
                 });
             }
         });
 
-        socket.on('call:reject', (data) => {
+        socket.on('call:ice-candidate', (data) => {
+            console.log('Received ICE candidate from:', socket.userId, 'to:', data.to);
             const recipientSocketId = users[data.to];
             if (recipientSocketId) {
-                io.to(recipientSocketId).emit('call:rejected', {
-                    from: socket.userId
+                io.to(recipientSocketId).emit('call:ice-candidate', {
+                    from: socket.userId,
+                    candidate: data.candidate
                 });
             }
         });

@@ -1,4 +1,16 @@
-import SimplePeer from 'simple-peer';
+import Peer from 'simple-peer';
+import { Buffer } from 'buffer';
+
+// Ensure WebRTC is supported
+if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error('WebRTC is not supported in this environment');
+}
+
+// Polyfill readable-stream
+import { Readable } from 'stream-browserify';
+if (!global.Readable) {
+    global.Readable = Readable;
+}
 
 export class WebRTCService {
     constructor(socket, userId) {
@@ -15,31 +27,36 @@ export class WebRTCService {
         this.currentCallUserId = null;
 
         this.setupSocketListeners();
-    }
-
-    setupSocketListeners() {
+    } setupSocketListeners() {
         // Incoming call offer
         this.socket.on('call:offer', async ({ from, offer }) => {
-            console.log(`Received call offer from ${from}`);
+            console.log(`Received call offer from ${from}`, offer);
 
-            // Store call state
-            this.currentCallUserId = from;
-            this.isCallInitiator = false;
-
-            if (this.onCallStarted) {
-                this.onCallStarted(from, false);
-            }
-
-            // Create peer connection as receiver
             try {
-                // Get local media stream
+                // Store call state
+                this.currentCallUserId = from;
+                this.isCallInitiator = false;
+
+                if (this.onCallStarted) {
+                    this.onCallStarted(from, false);
+                }
+
+                // Get local media stream first
                 await this.getLocalStream();
 
                 // Create peer for receiving call
                 this.createPeer(false);
 
+                // Wait a bit for peer to initialize
+                await new Promise(resolve => setTimeout(resolve, 100));
+
                 // Process received offer
-                this.peer.signal(offer);
+                if (this.peer) {
+                    console.log('Processing offer');
+                    this.peer.signal(offer);
+                } else {
+                    throw new Error('Peer not created');
+                }
             } catch (error) {
                 console.error('Error handling call offer:', error);
                 this.endCall();
@@ -48,17 +65,29 @@ export class WebRTCService {
 
         // Answer to our call
         this.socket.on('call:answer', ({ from, answer }) => {
-            console.log(`Received call answer from ${from}`);
+            console.log(`Received call answer from ${from}`, answer);
 
-            if (this.peer && from === this.currentCallUserId) {
-                this.peer.signal(answer);
+            try {
+                if (this.peer && from === this.currentCallUserId) {
+                    console.log('Processing answer');
+                    this.peer.signal(answer);
+                }
+            } catch (error) {
+                console.error('Error processing answer:', error);
+                this.endCall();
             }
         });
 
         // ICE candidate exchange
         this.socket.on('call:ice-candidate', ({ from, candidate }) => {
-            if (this.peer && from === this.currentCallUserId) {
-                this.peer.signal(candidate);
+            console.log(`Received ICE candidate from ${from}`, candidate);
+
+            try {
+                if (this.peer && from === this.currentCallUserId) {
+                    this.peer.signal({ candidate });
+                }
+            } catch (error) {
+                console.error('Error processing ICE candidate:', error);
             }
         });
 
@@ -73,79 +102,152 @@ export class WebRTCService {
     async getLocalStream() {
         if (!this.localStream) {
             try {
-                this.localStream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
+                console.log('Requesting media permissions...');
+
+                // Check if mediaDevices is available
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('getUserMedia is not supported in this browser');
+                }
+
+                // Request media with constraints
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
                     audio: true
-                });
+                };
+
+                this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                console.log('Media stream obtained successfully');
             } catch (error) {
-                console.error('Failed to get local stream:', error);
+                console.error('Failed to get local stream:', error.name, error.message);
                 throw error;
             }
         }
 
-        return this.localStream;
-    }
+        if (!this.localStream) {
+            throw new Error('Failed to initialize local stream');
+        }
 
-    createPeer(isInitiator) {
+        return this.localStream;
+    } createPeer(isInitiator) {
         // End existing peer if any
         if (this.peer) {
             this.peer.destroy();
+            this.peer = null;
         }
 
-        // Create new peer connection
-        this.peer = new SimplePeer({
-            initiator: isInitiator,
-            stream: this.localStream,
-            trickle: true
-        });
-
-        // Handle peer events
-        this.peer.on('signal', data => {
-            if (isInitiator) {
-                // Send offer to remote peer
-                this.socket.emit('call:offer', {
-                    to: this.currentCallUserId,
-                    offer: data
-                });
-            } else {
-                // Send answer to remote peer
-                this.socket.emit('call:answer', {
-                    to: this.currentCallUserId,
-                    answer: data
-                });
+        try {
+            if (!this.localStream) {
+                throw new Error('Local stream is not available');
             }
-        });
 
-        this.peer.on('stream', stream => {
-            this.remoteStream = stream;
-            if (this.onRemoteStream) {
-                this.onRemoteStream(stream);
-            }
-        });
+            console.log('Creating peer with config:', {
+                initiator: isInitiator,
+                trickle: true
+            });
 
-        this.peer.on('error', err => {
-            console.error('Peer connection error:', err);
-            this.endCall();
-        });
+            // Create the peer instance
+            this.peer = new Peer({
+                initiator: isInitiator,
+                trickle: true,
+                stream: this.localStream, // Pass stream directly in config
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                },
+                objectMode: true // Enable object mode for stream handling
+            });
 
-        this.peer.on('close', () => {
-            this.endCall();
-        });
+            console.log('Peer created successfully');            // Handle peer events
+            this.peer.on('signal', data => {
+                console.log('Signal event:', data.type);
+                if (isInitiator) {
+                    if (data.type === 'offer') {
+                        // Send offer to remote peer
+                        this.socket.emit('call:offer', {
+                            to: this.currentCallUserId,
+                            offer: data
+                        });
+                    }
+                } else {
+                    if (data.type === 'answer') {
+                        // Send answer to remote peer
+                        this.socket.emit('call:answer', {
+                            to: this.currentCallUserId,
+                            answer: data
+                        });
+                    }
+                }
+                // Handle ICE candidates
+                if (data.candidate) {
+                    this.socket.emit('call:ice-candidate', {
+                        to: this.currentCallUserId,
+                        candidate: data.candidate
+                    });
+                }
+            });
 
-        this.inCall = true;
+            this.peer.on('connect', () => {
+                console.log('Peer connection established');
+                this.inCall = true;
+            });
+
+            this.peer.on('stream', stream => {
+                console.log('Received remote stream');
+                this.remoteStream = stream;
+                if (this.onRemoteStream) {
+                    this.onRemoteStream(stream);
+                }
+            });
+
+            this.peer.on('track', (track, stream) => {
+                console.log('Received track:', track.kind);
+            });
+
+            this.peer.on('error', err => {
+                console.error('Peer connection error:', err);
+                this.endCall();
+            });
+
+            this.peer.on('close', () => {
+                console.log('Peer connection closed');
+                this.endCall();
+            });
+
+            // Debug events
+            this.peer.on('iceStateChange', (state) => {
+                console.log('ICE state:', state);
+            });
+
+            this.inCall = true;
+
+        } catch (error) {
+            console.error('Error creating peer:', error);
+            throw error;
+        }
     }
 
     async startCall(userId) {
         try {
+            console.log('Starting call with user:', userId);
+
             // Store call state
             this.currentCallUserId = userId;
             this.isCallInitiator = true;
 
+            console.log('Getting local media stream...');
             // Get local media stream
             await this.getLocalStream();
+            console.log('Local stream obtained:', this.localStream ? 'success' : 'failed');
 
+            console.log('Creating peer as initiator...');
             // Create peer as initiator
-            this.createPeer(true);
+            await this.createPeer(true);
+            console.log('Peer created successfully');
 
             if (this.onCallStarted) {
                 this.onCallStarted(userId, true);
@@ -157,16 +259,27 @@ export class WebRTCService {
             this.endCall();
             return false;
         }
-    }
+    } async answerCall() {
+        console.log('Answering call from:', this.currentCallUserId);
 
-    async answerCall() {
-        if (!this.currentCallUserId || this.isCallInitiator || !this.peer) {
+        if (!this.currentCallUserId || this.isCallInitiator) {
+            console.error('Cannot answer call: Invalid state');
             return false;
         }
 
         try {
-            // Signal to the peer that we're ready to connect
-            // The actual answer is handled in the signal event
+            // Get local media stream if not already available
+            if (!this.localStream) {
+                await this.getLocalStream();
+            }
+
+            // Create new peer if not exists
+            if (!this.peer) {
+                await this.createPeer(false);
+            }
+
+            // Set in call state
+            this.inCall = true;
 
             return true;
         } catch (error) {

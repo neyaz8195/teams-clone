@@ -107,15 +107,28 @@ export default function VideoCallPage() {
             setInCall(true);
             setIsInitiator(true);
         }
-    };
-
-    // Answer call
+    };    // Answer call
     const handleAnswerCall = async () => {
         if (!webRtcService || !inCall || isInitiator) {
+            console.log('Cannot answer call:', { webRtcService: !!webRtcService, inCall, isInitiator });
             return;
         }
 
-        await webRtcService.answerCall();
+        try {
+            console.log('Answering call...');
+            const success = await webRtcService.answerCall();
+
+            if (success) {
+                console.log('Call answered successfully');
+                // The overlay will be hidden because we're already inCall
+            } else {
+                console.error('Failed to answer call');
+                handleEndCall();
+            }
+        } catch (error) {
+            console.error('Error answering call:', error);
+            handleEndCall();
+        }
     };
 
     // End call
@@ -144,40 +157,44 @@ export default function VideoCallPage() {
     };
 
     return (
-        <Box sx={{ display: 'flex', height: '100%' }}>
+        <Box sx={{ display: 'flex', height: '100vh', bgcolor: 'background.default', p: 3, gap: 3 }}>
             {/* Contacts sidebar */}
             {!inCall && (
                 <Paper
                     sx={{
-                        width: 300,
-                        borderRadius: 0,
+                        width: 380,
+                        borderRadius: 2,
                         overflow: 'auto',
+                        boxShadow: (theme) => theme.shadows[3],
                     }}
                     elevation={0}
-                    variant="outlined"
                 >
-                    <Typography variant="h6" sx={{ p: 2 }}>
+                    <Typography variant="h6" sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
                         Start a Call
                     </Typography>
-                    <Box sx={{ p: 2 }}>
+                    <Box sx={{ p: 3 }}>
                         <Typography variant="body2" color="text.secondary">
                             Select a contact to start a video call
                         </Typography>
                     </Box>
-                    <Box sx={{ p: 1 }}>
+                    <Box sx={{ px: 2, pb: 2 }}>
                         {contacts.map((contact) => (
                             <Paper
                                 key={contact.auth0Id}
                                 elevation={1}
                                 sx={{
-                                    p: 2,
+                                    p: 2.5,
                                     m: 1,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
                                     cursor: 'pointer',
+                                    borderRadius: 2,
+                                    transition: 'all 0.2s ease',
                                     '&:hover': {
                                         bgcolor: 'action.hover',
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: (theme) => theme.shadows[4],
                                     },
                                 }}
                                 onClick={() => handleStartCall(contact)}
@@ -211,11 +228,20 @@ export default function VideoCallPage() {
             )}
 
             {/* Call area */}
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ 
+                flex: 1, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                bgcolor: 'background.paper',
+                borderRadius: 2,
+                overflow: 'hidden',
+                boxShadow: (theme) => theme.shadows[3],
+                minWidth: 0, // Prevents flex item from overflowing
+            }}>
                 {inCall ? (
                     <>
                         {/* Call in progress */}
-                        <Box sx={{ flex: 1, position: 'relative', bgcolor: '#000' }}>
+                        <Box sx={{ flex: 1, position: 'relative', bgcolor: '#1a1a1a' }}>
                             {/* Remote video (full size) */}
                             <video
                                 ref={remoteVideoRef}
@@ -229,17 +255,23 @@ export default function VideoCallPage() {
                             />
 
                             {/* Local video (small overlay) */}
-                            <Box
+                            <Paper
+                                elevation={8}
                                 sx={{
                                     position: 'absolute',
-                                    width: 200,
-                                    height: 150,
-                                    bottom: 20,
-                                    right: 20,
-                                    border: '2px solid #fff',
-                                    borderRadius: 1,
+                                    width: 280,
+                                    height: 210,
+                                    bottom: 100,
+                                    right: 24,
+                                    borderRadius: 3,
                                     overflow: 'hidden',
                                     bgcolor: '#000',
+                                    border: '2px solid rgba(255,255,255,0.1)',
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                        transform: 'scale(1.05)',
+                                        boxShadow: (theme) => theme.shadows[12],
+                                    }
                                 }}
                             >
                                 <video
@@ -254,7 +286,24 @@ export default function VideoCallPage() {
                                         transform: 'scaleX(-1)', // Mirror effect
                                     }}
                                 />
-                            </Box>
+                                {!videoEnabled && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            bgcolor: 'rgba(0,0,0,0.7)',
+                                        }}
+                                    >
+                                        <VideocamOffIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.8)' }} />
+                                    </Box>
+                                )}
+                            </Paper>
 
                             {/* Call controls */}
                             <Box
@@ -265,60 +314,66 @@ export default function VideoCallPage() {
                                     transform: 'translateX(-50%)',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    bgcolor: 'rgba(0,0,0,0.5)',
-                                    borderRadius: 4,
-                                    p: 1,
+                                    backdropFilter: 'blur(10px)',
+                                    bgcolor: 'rgba(0,0,0,0.6)',
+                                    borderRadius: 8,
+                                    p: 2,
+                                    gap: 2,
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                                 }}
                             >
                                 <IconButton
-                                    color="primary"
                                     onClick={handleToggleAudio}
-                                    sx={{ mx: 1 }}
+                                    sx={{
+                                        width: 56,
+                                        height: 56,
+                                        bgcolor: audioEnabled ? 'rgba(255,255,255,0.1)' : 'error.main',
+                                        '&:hover': {
+                                            bgcolor: audioEnabled ? 'rgba(255,255,255,0.2)' : 'error.dark',
+                                        },
+                                        transition: 'all 0.2s ease',
+                                    }}
                                 >
-                                    {audioEnabled ? <MicIcon /> : <MicOffIcon />}
+                                    {audioEnabled ?
+                                        <MicIcon sx={{ color: 'white', fontSize: 28 }} /> :
+                                        <MicOffIcon sx={{ color: 'white', fontSize: 28 }} />
+                                    }
                                 </IconButton>
                                 <IconButton
-                                    color="error"
                                     onClick={handleEndCall}
                                     sx={{
-                                        mx: 1,
+                                        width: 56,
+                                        height: 56,
                                         bgcolor: 'error.main',
-                                        color: 'white',
                                         '&:hover': {
                                             bgcolor: 'error.dark',
                                         },
+                                        transition: 'all 0.2s ease',
                                     }}
                                 >
-                                    <CallEndIcon />
+                                    <CallEndIcon sx={{ color: 'white', fontSize: 28 }} />
                                 </IconButton>
                                 <IconButton
-                                    color="primary"
                                     onClick={handleToggleVideo}
-                                    sx={{ mx: 1 }}
+                                    sx={{
+                                        width: 56,
+                                        height: 56,
+                                        bgcolor: videoEnabled ? 'rgba(255,255,255,0.1)' : 'error.main',
+                                        '&:hover': {
+                                            bgcolor: videoEnabled ? 'rgba(255,255,255,0.2)' : 'error.dark',
+                                        },
+                                        transition: 'all 0.2s ease',
+                                    }}
                                 >
-                                    {videoEnabled ? <VideocamIcon /> : <VideocamOffIcon />}
+                                    {videoEnabled ?
+                                        <VideocamIcon sx={{ color: 'white', fontSize: 28 }} /> :
+                                        <VideocamOffIcon sx={{ color: 'white', fontSize: 28 }} />
+                                    }
                                 </IconButton>
-                            </Box>
-
-                            {/* Call info */}
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    top: 20,
-                                    left: 20,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    color: 'white',
-                                }}
-                            >
-                                <Avatar alt={callUser?.name} src={callUser?.picture} />
-                                <Typography variant="h6" sx={{ ml: 2 }}>
-                                    {callUser?.name || 'Unknown User'}
-                                </Typography>
                             </Box>
 
                             {/* Incoming call overlay */}
-                            {inCall && !isInitiator && (
+                            {!isInitiator && !webRtcService?.hasAnswered && (
                                 <Box
                                     sx={{
                                         position: 'absolute',
@@ -326,53 +381,64 @@ export default function VideoCallPage() {
                                         left: 0,
                                         right: 0,
                                         bottom: 0,
-                                        bgcolor: 'rgba(0,0,0,0.7)',
+                                        bgcolor: 'rgba(0,0,0,0.85)',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: 'white',
+                                        gap: 3,
+                                        '@keyframes pulse': {
+                                            '0%': {
+                                                transform: 'scale(1)',
+                                                boxShadow: '0 0 0 0 rgba(76, 175, 80, 0.4)'
+                                            },
+                                            '70%': {
+                                                transform: 'scale(1.1)',
+                                                boxShadow: '0 0 0 20px rgba(76, 175, 80, 0)'
+                                            },
+                                            '100%': {
+                                                transform: 'scale(1)',
+                                                boxShadow: '0 0 0 0 rgba(76, 175, 80, 0)'
+                                            }
+                                        }
                                     }}
                                 >
                                     <Avatar
                                         alt={callUser?.name}
                                         src={callUser?.picture}
-                                        sx={{ width: 100, height: 100, mb: 2 }}
+                                        sx={{
+                                            width: 120,
+                                            height: 120,
+                                            border: '4px solid rgba(255,255,255,0.2)',
+                                            animation: 'pulse 2s infinite'
+                                        }}
                                     />
-                                    <Typography variant="h5" sx={{ mb: 1 }}>
-                                        {callUser?.name || 'Unknown User'}
-                                    </Typography>
-                                    <Typography variant="body1" sx={{ mb: 4 }}>
-                                        Incoming video call...
+                                    <Typography variant="h5" color="white" sx={{ mb: 1 }}>
+                                        Incoming call from {callUser?.name}
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 2 }}>
                                         <IconButton
-                                            color="error"
-                                            onClick={handleEndCall}
-                                            sx={{
-                                                bgcolor: 'error.main',
-                                                color: 'white',
-                                                '&:hover': {
-                                                    bgcolor: 'error.dark',
-                                                },
-                                                p: 2,
-                                            }}
-                                        >
-                                            <CallEndIcon fontSize="large" />
-                                        </IconButton>
-                                        <IconButton
-                                            color="success"
                                             onClick={handleAnswerCall}
                                             sx={{
+                                                width: 64,
+                                                height: 64,
                                                 bgcolor: 'success.main',
-                                                color: 'white',
-                                                '&:hover': {
-                                                    bgcolor: 'success.dark',
-                                                },
-                                                p: 2,
+                                                '&:hover': { bgcolor: 'success.dark' },
+                                                animation: 'pulse 2s infinite'
                                             }}
                                         >
-                                            <VideocamIcon fontSize="large" />
+                                            <VideocamIcon sx={{ color: 'white', fontSize: 32 }} />
+                                        </IconButton>
+                                        <IconButton
+                                            onClick={handleEndCall}
+                                            sx={{
+                                                width: 64,
+                                                height: 64,
+                                                bgcolor: 'error.main',
+                                                '&:hover': { bgcolor: 'error.dark' }
+                                            }}
+                                        >
+                                            <CallEndIcon sx={{ color: 'white', fontSize: 32 }} />
                                         </IconButton>
                                     </Box>
                                 </Box>
@@ -387,17 +453,13 @@ export default function VideoCallPage() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             height: '100%',
-                            p: 3
+                            gap: 2,
+                            p: 4,
                         }}
                     >
-                        <PersonIcon sx={{ fontSize: 100, color: 'text.secondary', mb: 2 }} />
-                        <Typography variant="h5" gutterBottom>
-                            Video Calling
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary" align="center">
-                            Select a contact from the list to start a video call.
-                            <br />
-                            Make sure your camera and microphone are connected.
+                        <VideocamIcon sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.5 }} />
+                        <Typography variant="h6" color="text.secondary">
+                            Select a contact to start a video call
                         </Typography>
                     </Box>
                 )}

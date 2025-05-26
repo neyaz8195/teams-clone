@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Box, List, ListItem, ListItemAvatar, Avatar, ListItemText, Typography, Paper, TextField, IconButton, Divider, Badge, Popover } from '@mui/material';
 import { Send as SendIcon, InsertDriveFile as FileIcon, Image as ImageIcon, EmojiEmotions as EmojiIcon } from '@mui/icons-material';
+import { grey } from '@mui/material/colors';
 import EmojiPicker from 'emoji-picker-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSocket } from '../hooks/useSocket';
@@ -21,19 +22,12 @@ export default function ChatPage() {
     const fileInputRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(null);
 
-    console.log("socket :::", socket);
-    console.log("token :::", token);
-
     // Initialize services
     useEffect(() => {
         if (socket && token) {
             import('../services/ApiService').then((module) => {
                 const apiService = module.default;
-                console.log('Setting token in ChatPage:', token);
                 apiService.setToken(token);
-
-                // Verify token is set
-                console.log('Verifying token:', apiService.token);
 
                 const chatSvc = new ChatService(socket, apiService);
                 setChatService(chatSvc);
@@ -198,65 +192,110 @@ export default function ChatPage() {
     };
 
     return (
-        <Box sx={{ display: 'flex', height: '100vh', bgcolor: 'background.default' }}>
+        <Box sx={{ display: 'flex', height: '100vh', bgcolor: 'background.default', p: 3, gap: 3 }}>
             {/* Contacts sidebar */}
             <Paper
                 sx={{
-                    width: 300,
-                    borderRadius: 0,
-                    overflow: 'auto',
+                    width: 380,
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    boxShadow: (theme) => theme.shadows[3],
+                    display: 'flex',
+                    flexDirection: 'column',
                 }}
                 elevation={0}
-                variant="outlined"
-            >                <Box sx={{ p: 2 }}>
-                    <Typography variant="h6" gutterBottom>
+            >
+                <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         Messages
                     </Typography>
                 </Box>
-                <List>
+                <List sx={{ flex: 1, overflow: 'auto', px: 2 }}>
                     {allUsers.map((contact) => (
-                        <ListItem
+                        <Paper
                             key={contact.auth0Id}
-                            button
-                            selected={selectedContact?.auth0Id === contact.auth0Id}
-                            onClick={() => handleContactSelect(contact)}
-                            divider
+                            elevation={selectedContact?.auth0Id === contact.auth0Id ? 1 : 0}
+                            sx={{
+                                my: 1,
+                                transition: 'all 0.2s ease',
+                                borderRadius: 2,
+                                bgcolor: selectedContact?.auth0Id === contact.auth0Id ? 'action.selected' : 'transparent',
+                                '&:hover': {
+                                    bgcolor: selectedContact?.auth0Id === contact.auth0Id ? 'action.selected' : 'action.hover',
+                                    transform: 'translateY(-1px)',
+                                    boxShadow: (theme) => theme.shadows[2],
+                                },
+                            }}
                         >
-                            <ListItemAvatar>
-                                <Badge
-                                    overlap="circular"
-                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                                    variant="dot"
-                                    color={isUserOnline(contact.auth0Id) ? 'success' : 'error'}
-                                >
-                                    <Avatar alt={contact.name} src={contact.picture} />
-                                </Badge>
-                            </ListItemAvatar>
-                            <ListItemText
-                                primary={contact.name}
-                                secondary={
-                                    <Typography noWrap variant="body2" color="text.secondary">
-                                        {contact.email}
-                                    </Typography>
-                                }
-                            />
-                        </ListItem>
+                            <ListItem
+                                button
+                                onClick={() => handleContactSelect(contact)}
+                                sx={{ 
+                                    p: 2,
+                                    borderRadius: 2,
+                                }}
+                            >
+                                <ListItemAvatar>
+                                    <Badge
+                                        overlap="circular"
+                                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                        variant="dot"
+                                        color={isUserOnline(contact.auth0Id) ? 'success' : 'error'}
+                                    >
+                                        <Avatar 
+                                            alt={contact.name} 
+                                            src={contact.picture}
+                                            sx={{ 
+                                                width: 48, 
+                                                height: 48,
+                                                border: '2px solid',
+                                                borderColor: (theme) => 
+                                                    isUserOnline(contact.auth0Id) 
+                                                        ? 'success.light' 
+                                                        : 'transparent'
+                                            }}
+                                        />
+                                    </Badge>
+                                </ListItemAvatar>
+                                <ListItemText
+                                    primary={contact.name}
+                                    secondary={contact.email}
+                                    primaryTypographyProps={{
+                                        variant: 'subtitle1',
+                                        fontWeight: selectedContact?.auth0Id === contact.auth0Id ? 600 : 400
+                                    }}
+                                    sx={{ ml: 2 }}
+                                />
+                            </ListItem>
+                        </Paper>
                     ))}
                 </List>
             </Paper>
 
             {/* Chat area */}
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
+            <Box 
+                sx={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    bgcolor: 'background.paper',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    boxShadow: (theme) => theme.shadows[3],
+                    minWidth: 0, // Prevents flex item from overflowing
+                }}
+            >
                 {selectedContact ? (
                     <>
                         {/* Chat header */}
                         <Box
                             sx={{
-                                p: 2,
+                                p: 3,
                                 borderBottom: 1,
                                 borderColor: 'divider',
                                 display: 'flex',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                bgcolor: 'background.paper',
                             }}
                         >
                             <Badge
@@ -265,10 +304,24 @@ export default function ChatPage() {
                                 variant="dot"
                                 color={isUserOnline(selectedContact.auth0Id) ? 'success' : 'error'}
                             >
-                                <Avatar alt={selectedContact.name} src={selectedContact.picture} />
+                                <Avatar 
+                                    alt={selectedContact.name} 
+                                    src={selectedContact.picture}
+                                    sx={{ 
+                                        width: 48, 
+                                        height: 48,
+                                        border: '2px solid',
+                                        borderColor: (theme) => 
+                                            isUserOnline(selectedContact.auth0Id) 
+                                                ? 'success.light' 
+                                                : 'transparent'
+                                    }}
+                                />
                             </Badge>
                             <Box sx={{ ml: 2 }}>
-                                <Typography variant="h6">{selectedContact.name}</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                    {selectedContact.name}
+                                </Typography>
                                 <Typography variant="body2" color="text.secondary">
                                     {isUserOnline(selectedContact.auth0Id) ? 'Online' : 'Offline'}
                                 </Typography>
@@ -280,9 +333,12 @@ export default function ChatPage() {
                             sx={{
                                 flex: 1,
                                 overflowY: 'auto',
-                                p: 2,
+                                p: 3,
                                 display: 'flex',
-                                flexDirection: 'column'
+                                flexDirection: 'column',
+                                bgcolor: (theme) => theme.palette.mode === 'dark' 
+                                    ? 'background.default' 
+                                    : grey[50],
                             }}
                         >
                             {messages.map((message) => {
@@ -302,9 +358,12 @@ export default function ChatPage() {
                                             elevation={1}
                                             sx={{
                                                 p: 2,
-                                                bgcolor: isOwnMessage ? 'primary.light' : 'grey.100',
-                                                color: isOwnMessage ? 'white' : 'inherit',
-                                                borderRadius: 2
+                                                bgcolor: isOwnMessage 
+                                                    ? 'primary.main'
+                                                    : 'background.paper',
+                                                color: isOwnMessage ? 'primary.contrastText' : 'text.primary',
+                                                borderRadius: 3,
+                                                boxShadow: (theme) => theme.shadows[1],
                                             }}
                                         >
                                             {hasAttachment && (
@@ -370,11 +429,13 @@ export default function ChatPage() {
                         <Box
                             component="form"
                             sx={{
-                                p: 2,
+                                p: 3,
                                 borderTop: 1,
                                 borderColor: 'divider',
                                 display: 'flex',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                gap: 2,
+                                bgcolor: 'background.paper',
                             }}
                             onSubmit={(e) => {
                                 e.preventDefault();
@@ -384,7 +445,7 @@ export default function ChatPage() {
                             <IconButton
                                 color="primary"
                                 component="label"
-                                sx={{ mr: 1 }}
+                                size="large"
                             >
                                 <ImageIcon />
                                 <input
@@ -399,24 +460,36 @@ export default function ChatPage() {
                                 fullWidth
                                 placeholder="Type a message"
                                 variant="outlined"
-                                size="small"
+                                size="medium"
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 3,
+                                    }
+                                }}
                             />
                             <IconButton
                                 color="primary"
-                                sx={{ ml: 1 }}
-                                disabled={!newMessage.trim()}
-                                onClick={handleSendMessage}
+                                onClick={handleEmojiButtonClick}
+                                size="large"
                             >
-                                <SendIcon />
+                                <EmojiIcon />
                             </IconButton>
                             <IconButton
                                 color="primary"
-                                sx={{ ml: 1 }}
-                                onClick={handleEmojiButtonClick}
+                                disabled={!newMessage.trim()}
+                                onClick={handleSendMessage}
+                                size="large"
+                                sx={{
+                                    bgcolor: newMessage.trim() ? 'primary.main' : 'transparent',
+                                    color: newMessage.trim() ? 'primary.contrastText' : 'inherit',
+                                    '&:hover': {
+                                        bgcolor: newMessage.trim() ? 'primary.dark' : 'action.hover',
+                                    },
+                                }}
                             >
-                                <EmojiIcon />
+                                <SendIcon />
                             </IconButton>
                             <Popover
                                 open={Boolean(anchorEl)}
@@ -441,11 +514,14 @@ export default function ChatPage() {
                     <Box
                         sx={{
                             display: 'flex',
+                            flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            height: '100%'
+                            height: '100%',
+                            gap: 2,
                         }}
                     >
+                        <SendIcon sx={{ fontSize: 64, color: 'text.secondary', opacity: 0.5 }} />
                         <Typography variant="h6" color="text.secondary">
                             Select a contact to start chatting
                         </Typography>
