@@ -93,27 +93,31 @@ export default function ChatPage() {
         setSelectedContact(contact);
         setMessages([]);
     };
-
-    const handleSendMessage = () => {
+    const handleSendMessage = async () => {
         if (!newMessage.trim() || !selectedContact || !chatService) {
             return;
         }
 
-        const messageData = chatService.sendMessage(selectedContact.auth0Id, newMessage);
+        try {
+            const messageData = await chatService.sendMessage(selectedContact.auth0Id, newMessage);
 
-        // Add to local messages
-        setMessages(prev => [
-            ...prev,
-            {
-                _id: messageData.messageId,
-                content: newMessage,
-                sender: user.userId,
-                timestamp: messageData.timestamp,
-                read: false
-            }
-        ]);
+            // Add to local messages
+            setMessages(prev => [
+                ...prev,
+                {
+                    _id: messageData.messageId,
+                    content: newMessage,
+                    sender: user.userId,
+                    timestamp: messageData.timestamp,
+                    read: false
+                }
+            ]);
 
-        setNewMessage('');
+            setNewMessage('');
+        } catch (error) {
+            // Handle error (you might want to show a notification)
+            console.error('Failed to send message:', error);
+        }
     };
 
     const handleFileUpload = async (event) => {

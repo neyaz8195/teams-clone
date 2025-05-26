@@ -49,12 +49,14 @@ messageSchema.index({ sender: 1, recipient: 1 });
 
 // Methods
 messageSchema.statics.getConversation = async function (user1, user2, limit = 50, skip = 0) {
-    return this.find({
+    const query = {
         $or: [
             { sender: user1, recipient: user2 },
             { sender: user2, recipient: user1 }
         ]
-    })
+    };
+
+    return this.find(query)
         .sort({ timestamp: -1 })
         .skip(skip)
         .limit(limit);

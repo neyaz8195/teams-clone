@@ -11,7 +11,6 @@ const jwtCheck = verifyAuth;
 // Register or update user route
 router.post('/register', jwtCheck, async (req, res) => {
     try {
-        console.log('Auth payload:', req.auth.payload); // Debug log
         const auth0Id = req.auth.payload.sub;
 
         // Try to get user info from Auth0 if not in token

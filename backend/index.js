@@ -7,9 +7,9 @@ const path = require('path');
 const dotenv = require('dotenv');
 dotenv.config();
 const helmet = require('helmet');
-const jwt = require('jsonwebtoken');
-const jwksRsa = require('jwks-rsa');
-const Redis = require('redis');
+
+// Enable mongoose debug mode
+mongoose.set('debug', true);
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -20,21 +20,9 @@ const callRoutes = require('./routes/calls');
 // Middleware
 const { verifyAuth } = require('./middleware/auth');
 
-// Utils
-const redisCache = require('./utils/redisCache');
-
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
-
-// Initialize Redis client
-let redisClient;
-(async () => {
-    redisClient = await redisCache.getClient();
-    console.log('Redis client initialized');
-})().catch(err => {
-    console.error('Failed to initialize Redis client:', err);
-});
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/teams-clone', {
@@ -140,11 +128,8 @@ io.use(async (socket, next) => {
 
 // Socket.IO event handlers
 (async () => {
-    // Make sure Redis client is available
-    const redisClient = await redisCache.getClient();
-
     // Initialize socket handlers
-    require('./sockets')(io, redisClient);
+    require('./sockets')(io);
 })();
 
 // Start server

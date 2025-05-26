@@ -4,10 +4,6 @@ const Message = require('../models/message');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const redisCache = require('../utils/redisCache');
-
-// Get the Redis client from the app
-const getRedisClient = (req) => req.app.get('redisClient');
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
@@ -39,24 +35,11 @@ router.get('/:userId', async (req, res) => {
         const { userId: otherUserId } = req.params;
         const { limit = 50, skip = 0 } = req.query;
 
-        // Import Redis cache utils
-        const redisCache = require('../utils/redisCache');
+        // Get total count of messages in collection for debugging
+        const totalMessages = await Message.countDocuments();
+        console.log('Total messages in collection:', totalMessages);
 
-        // Try to get from cache first (only for initial load with no skip)
-        if (parseInt(skip) === 0) {
-            // Create a unique cache key for this conversation
-            const cacheKey = `conversation:${currentUserId}:${otherUserId}`;
-
-            // Try to get cached conversation
-            const cachedMessages = await redisCache.getValue(cacheKey, true);
-
-            if (cachedMessages) {
-                console.log('Serving chat from Redis cache');
-                return res.status(200).json(cachedMessages);
-            }
-        }
-
-        // Cache miss or pagination request, fetch from database
+        // Fetch directly from MongoDB
         const messages = await Message.getConversation(
             currentUserId,
             otherUserId,
@@ -64,14 +47,10 @@ router.get('/:userId', async (req, res) => {
             parseInt(skip)
         );
 
-        // Cache the result for future requests (only for initial load)
-        if (parseInt(skip) === 0) {
-            // Create a unique cache key for this conversation
-            const cacheKey = `conversation:${currentUserId}:${otherUserId}`;
-
-            // Cache for 2 minutes (messages are frequently updated)
-            await redisCache.setValue(cacheKey, messages, 120);
-        }
+        // Log the retrieved messages
+        console.log('Messages retrieved from MongoDB:', JSON.stringify(messages, null, 2));
+        console.log('Number of messages retrieved:', messages.length);
+        console.log('Query parameters:', { currentUserId, otherUserId, limit, skip });
 
         res.status(200).json(messages);
     } catch (error) {
@@ -87,9 +66,6 @@ router.post('/:userId', async (req, res) => {
         const { userId: recipientId } = req.params;
         const { content, messageId } = req.body;
 
-        // Import Redis cache utils
-        const redisCache = require('../utils/redisCache');
-
         const message = new Message({
             messageId: messageId || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             sender: senderId,
@@ -99,12 +75,6 @@ router.post('/:userId', async (req, res) => {
         });
 
         await message.save();
-
-        // Invalidate cache since we have a new message
-        // Delete both conversation cache entries (one for each user's perspective)
-        await redisCache.deleteValue(`conversation:${senderId}:${recipientId}`);
-        await redisCache.deleteValue(`conversation:${recipientId}:${senderId}`);
-
         res.status(201).json(message);
     } catch (error) {
         console.error('Send message error:', error);
@@ -155,7 +125,9 @@ router.post('/upload/:userId', upload.single('file'), async (req, res) => {
             name: file.originalname,
             size: file.size,
             mimeType: file.mimetype
-        };        // Create message with attachment
+        };
+
+        // Create message with attachment
         const message = new Message({
             messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             sender: senderId,
@@ -166,15 +138,6 @@ router.post('/upload/:userId', upload.single('file'), async (req, res) => {
         });
 
         await message.save();
-
-        // Import Redis cache utils
-        const redisCache = require('../utils/redisCache');
-
-        // Invalidate cache since we have a new message with attachment
-        // Delete both conversation cache entries (one for each user's perspective)
-        await redisCache.deleteValue(`conversation:${senderId}:${recipientId}`);
-        await redisCache.deleteValue(`conversation:${recipientId}:${senderId}`);
-
         res.status(201).json(message);
     } catch (error) {
         console.error('Upload attachment error:', error);

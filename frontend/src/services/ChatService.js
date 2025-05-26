@@ -69,10 +69,8 @@ export class ChatService {
         return () => {
             this.readHandlers.delete(userId);
         };
-    }
-
-    // Send a message
-    sendMessage(userId, message) {
+    }    // Send a message
+    async sendMessage(userId, message) {
         const messageData = {
             to: userId,
             message,
@@ -80,11 +78,19 @@ export class ChatService {
             messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         };
 
-        this.socket.emit('message:send', messageData);
+        try {
+            // First save to MongoDB through the API
+            await this.api.post(`/api/chat/${userId}`, {
+                content: message,
+                messageId: messageData.messageId
+            });
 
-        // Also save to backend
-        this.api.post(`/api/chat/${userId}`, { content: message })
-            .catch(err => console.error('Error saving message:', err));
+            // Then emit through socket for real-time delivery
+            this.socket.emit('message:send', messageData);
+        } catch (err) {
+            console.error('Error saving message:', err);
+            throw err; // Re-throw to handle in the UI
+        }
 
         return messageData;
     }
