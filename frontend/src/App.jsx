@@ -54,6 +54,9 @@ const AppContainer = () => {
 
   const { isAuthenticated, user, token, loading } = auth;
 
+  // Debug auth state
+  console.log('Auth state:', { isAuthenticated, hasUser: !!user, hasToken: !!token, loading });
+
   if (loading) {
     return <div>Loading...</div>;
   }

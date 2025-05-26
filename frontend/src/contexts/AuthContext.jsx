@@ -90,7 +90,15 @@ export function AuthProvider({ children }) {
                     })
                         .then(res => res.json())
                         .then(userData => {
-                            // Set authenticated user state
+                            // Set authenticated user state                            // Import and configure API service with token
+                            import('../services/ApiService.js').then(module => {
+                                const apiService = module.default;
+                                apiService.setToken(authResult.accessToken);
+                                console.log('Auth: Setting token in ApiService during login');
+                            }).catch(err => {
+                                console.error('Failed to set token in ApiService:', err);
+                            });
+
                             dispatch({
                                 type: 'LOGIN_SUCCESS',
                                 payload: {
@@ -175,7 +183,15 @@ export function AuthProvider({ children }) {
                             throw new Error('Session invalid');
                         })
                         .then(res => res.json())
-                        .then(userData => {
+                        .then(userData => {                            // Import and configure API service with token
+                            import('../services/ApiService.js').then(module => {
+                                const apiService = module.default;
+                                apiService.setToken(accessToken);
+                                console.log('Auth: Setting token in ApiService during session check');
+                            }).catch(err => {
+                                console.error('Failed to set token in ApiService:', err);
+                            });
+
                             dispatch({
                                 type: 'LOGIN_SUCCESS',
                                 payload: {

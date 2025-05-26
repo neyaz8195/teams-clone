@@ -1,17 +1,18 @@
 import apiService from './ApiService';
 
 export class UserService {
-    constructor(apiService) {
-        this.api = apiService;
-    }
-
-    // Get all users
+    constructor(apiServiceInstance = apiService) {
+        this.api = apiServiceInstance;
+    }    // Get all users
     async getUsers() {
         try {
-            return await this.api.get('/api/users');
+            console.log('UserService: Fetching all users with token available:', !!this.api.token);
+            const users = await this.api.get('/api/users');
+            console.log('UserService: Users fetch successful:', users.length);
+            return users;
         } catch (error) {
             console.error('Error fetching users:', error);
-            return [];
+            throw error; // Re-throw to allow proper error handling
         }
     }
 
@@ -43,15 +44,16 @@ export class UserService {
             console.error('Error adding contact:', error);
             return { error: 'Failed to add contact' };
         }
-    }
-
-    // Get user contacts
+    }    // Get user contacts
     async getContacts() {
         try {
-            return await this.api.get('/api/users/contacts');
+            console.log('UserService: Fetching contacts with token available:', !!this.api.token);
+            const contacts = await this.api.get('/api/users/contacts');
+            console.log('UserService: Contacts fetch successful:', contacts.length);
+            return contacts;
         } catch (error) {
             console.error('Error fetching contacts:', error);
-            return [];
+            throw error; // Re-throw to allow proper error handling
         }
     }
 }

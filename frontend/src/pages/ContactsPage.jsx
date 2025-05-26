@@ -23,6 +23,7 @@ import {
     Tooltip,
     CircularProgress
 } from '@mui/material';
+import TokenTester from '../components/TokenTester';
 import {
     Search as SearchIcon,
     PersonAdd as PersonAddIcon,
@@ -35,6 +36,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useSocket } from '../hooks/useSocket';
 import UserService from '../services/UserService';
+import apiService from '../services/ApiService';
 
 export default function ContactsPage() {
     const { user } = useAuth();
@@ -56,26 +58,66 @@ export default function ContactsPage() {
         open: false,
         message: '',
         severity: 'success'
-    });
-
-    // Initialize services
+    });    // Initialize services
     useEffect(() => {
         if (user) {
-            import('../services/ApiService').then((module) => {
-                const apiService = module.default;
-                apiService.setToken(user.token);
+            // Log authentication details for debugging
+            console.log("Auth user object:", user);
+            console.log("Token available:", !!user.token);
 
+            // Try to get token from localStorage as fallback
+            const lsToken = localStorage.getItem('access_token');
+            console.log("localStorage token available:", !!lsToken);
+
+            // Use token from user object or localStorage
+            const tokenToUse = user.token || lsToken;
+
+            if (tokenToUse) {
+                console.log("Using token:", tokenToUse.substring(0, 10) + "...");
+
+                // Set the token on the singleton apiService instance
+                apiService.setToken(tokenToUse);
+
+                // Create UserService with the configured apiService
                 const userSvc = new UserService(apiService);
                 setUserService(userSvc);
-            });
+            } else {
+                console.error("No authentication token available!");
+            }
         }
     }, [user]);
+
     // Load contacts and users
     useEffect(() => {
         if (userService) {
             const fetchData = async () => {
-                await loadContacts();
-                await loadAllUsers();
+                // Test the token first with session endpoint
+                try {
+                    console.log("Testing API session before loading data...");
+                    const sessionResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/session`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                        }
+                    });
+
+                    console.log("Session test response status:", sessionResponse.status);
+                    if (!sessionResponse.ok) {
+                        throw new Error(`Session check failed: ${sessionResponse.status}`);
+                    }
+
+                    console.log("Session test successful");
+
+                    // Now load the actual data
+                    await loadContacts();
+                    await loadAllUsers();
+                } catch (err) {
+                    console.error("API session test failed:", err);
+                    setNotification({
+                        open: true,
+                        message: 'Authentication issue detected. Please try logging in again.',
+                        severity: 'error'
+                    });
+                }
             };
 
             fetchData();
@@ -188,13 +230,14 @@ export default function ContactsPage() {
             u.name?.toLowerCase().includes(query) ||
             u.email?.toLowerCase().includes(query)
         );
-    });
-
-    return (
+    }); return (
         <Box sx={{ p: 3, maxWidth: '800px', mx: 'auto' }}>
             <Typography variant="h4" component="h1" gutterBottom>
                 Contacts
             </Typography>
+
+            {/* Token diagnostic tool */}
+            <TokenTester />
 
             {/* Search bar */}
             <TextField
