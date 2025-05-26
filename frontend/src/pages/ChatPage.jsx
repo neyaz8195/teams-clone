@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, List, ListItem, ListItemAvatar, Avatar, ListItemText, Typography, Paper, TextField, IconButton, Divider, Badge } from '@mui/material';
-import { Send as SendIcon, InsertDriveFile as FileIcon, Image as ImageIcon } from '@mui/icons-material';
+import { Box, List, ListItem, ListItemAvatar, Avatar, ListItemText, Typography, Paper, TextField, IconButton, Divider, Badge, Popover } from '@mui/material';
+import { Send as SendIcon, InsertDriveFile as FileIcon, Image as ImageIcon, EmojiEmotions as EmojiIcon } from '@mui/icons-material';
+import EmojiPicker from 'emoji-picker-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSocket } from '../hooks/useSocket';
 import ChatService from '../services/ChatService';
@@ -17,6 +18,7 @@ export default function ChatPage() {
     const [userService, setUserService] = useState(null);
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
+    const [anchorEl, setAnchorEl] = useState(null);
 
     // Initialize services
     useEffect(() => {
@@ -159,8 +161,24 @@ export default function ChatPage() {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    // Handle emoji click
+    const onEmojiClick = (emojiObject) => {
+        setNewMessage(prev => prev + emojiObject.emoji);
+        setAnchorEl(null);
+    };
+
+    // Handle emoji button click
+    const handleEmojiButtonClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    // Handle emoji picker close
+    const handleEmojiPickerClose = () => {
+        setAnchorEl(null);
+    };
+
     return (
-        <Box sx={{ display: 'flex', height: '100%' }}>
+        <Box sx={{ display: 'flex', height: '100vh', bgcolor: 'background.default' }}>
             {/* Contacts sidebar */}
             <Paper
                 sx={{
@@ -207,7 +225,7 @@ export default function ChatPage() {
             </Paper>
 
             {/* Chat area */}
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
                 {selectedContact ? (
                     <>
                         {/* Chat header */}
@@ -372,6 +390,30 @@ export default function ChatPage() {
                             >
                                 <SendIcon />
                             </IconButton>
+                            <IconButton
+                                color="primary"
+                                sx={{ ml: 1 }}
+                                onClick={handleEmojiButtonClick}
+                            >
+                                <EmojiIcon />
+                            </IconButton>
+                            <Popover
+                                open={Boolean(anchorEl)}
+                                anchorEl={anchorEl}
+                                onClose={handleEmojiPickerClose}
+                                anchorOrigin={{
+                                    vertical: 'top',
+                                    horizontal: 'right',
+                                }}
+                                transformOrigin={{
+                                    vertical: 'bottom',
+                                    horizontal: 'right',
+                                }}
+                            >
+                                <Box sx={{ p: 1 }}>
+                                    <EmojiPicker onEmojiClick={onEmojiClick} />
+                                </Box>
+                            </Popover>
                         </Box>
                     </>
                 ) : (
