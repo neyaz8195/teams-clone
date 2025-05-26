@@ -15,7 +15,6 @@ export class ApiService {
         try {
             const storedToken = localStorage.getItem('access_token');
             if (storedToken) {
-                console.log('ApiService: Retrieved token from localStorage');
                 this._token = storedToken;
                 return storedToken;
             }
@@ -28,7 +27,6 @@ export class ApiService {
 
     // Setter for token
     setToken(token) {
-        console.log('Setting API token:', token ? 'Token present' : 'Token missing');
         this._token = token;
     } getHeaders() {
         const headers = {
@@ -43,10 +41,8 @@ export class ApiService {
         return headers;
     } async get(endpoint) {
         try {
-            console.log(`Making GET request to: ${endpoint} with token: ${this.token ? 'Present' : 'Missing'}`);
 
             const headers = this.getHeaders();
-            console.log('Request headers:', headers);
 
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
                 method: 'GET',
@@ -158,13 +154,9 @@ export class ApiService {
 // Create API service with baseUrl but no token initially 
 const apiService = new ApiService(import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
-// For debugging
-console.log('ApiService initialized with baseUrl:', apiService.baseUrl);
-
 // Auto-set token from localStorage if available
 const accessToken = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null;
 if (accessToken) {
-    console.log('Setting token from localStorage');
     apiService.setToken(accessToken);
 }
 

@@ -28,10 +28,23 @@ export default function Login() {
                         alignItems: 'center',
                         width: '100%',
                     }}
-                >
-                    <Typography component="h1" variant="h4">
-                        Teams Clone
-                    </Typography>
+                >                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+                        <Box
+                            component="img"
+                            src="/teams-clone-logo.svg"
+                            alt="Teams Clone Logo"
+                            sx={{
+                                width: 72,
+                                height: 72,
+                                mb: 2,
+                                borderRadius: 2,
+                                boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                            }}
+                        />
+                        <Typography component="h1" variant="h4">
+                            Teams Clone
+                        </Typography>
+                    </Box>
                     <Box
                         sx={{
                             width: '100%',

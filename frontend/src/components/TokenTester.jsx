@@ -17,7 +17,6 @@ export default function TokenTester() {
         try {
             // Get stored token
             const storedToken = localStorage.getItem('access_token');
-            console.log('Stored token available:', !!storedToken);
 
             if (!storedToken) {
                 throw new Error('No token found in localStorage');
@@ -36,7 +35,6 @@ export default function TokenTester() {
 
             // 2. Test via ApiService
             apiService.setToken(storedToken);
-            console.log('ApiService token set to:', apiService.token ? 'Present' : 'Missing');
 
             setTestResult({
                 tokenAvailable: !!storedToken,

@@ -37,7 +37,6 @@ router.get('/:userId', async (req, res) => {
 
         // Get total count of messages in collection for debugging
         const totalMessages = await Message.countDocuments();
-        console.log('Total messages in collection:', totalMessages);
 
         // Fetch directly from MongoDB
         const messages = await Message.getConversation(
@@ -46,11 +45,6 @@ router.get('/:userId', async (req, res) => {
             parseInt(limit),
             parseInt(skip)
         );
-
-        // Log the retrieved messages
-        console.log('Messages retrieved from MongoDB:', JSON.stringify(messages, null, 2));
-        console.log('Number of messages retrieved:', messages.length);
-        console.log('Query parameters:', { currentUserId, otherUserId, limit, skip });
 
         res.status(200).json(messages);
     } catch (error) {

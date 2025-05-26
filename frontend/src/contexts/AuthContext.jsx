@@ -94,7 +94,6 @@ export function AuthProvider({ children }) {
                             import('../services/ApiService.js').then(module => {
                                 const apiService = module.default;
                                 apiService.setToken(authResult.accessToken);
-                                console.log('Auth: Setting token in ApiService during login');
                             }).catch(err => {
                                 console.error('Failed to set token in ApiService:', err);
                             });
@@ -187,7 +186,6 @@ export function AuthProvider({ children }) {
                             import('../services/ApiService.js').then(module => {
                                 const apiService = module.default;
                                 apiService.setToken(accessToken);
-                                console.log('Auth: Setting token in ApiService during session check');
                             }).catch(err => {
                                 console.error('Failed to set token in ApiService:', err);
                             });

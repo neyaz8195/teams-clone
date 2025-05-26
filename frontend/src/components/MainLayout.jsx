@@ -1,113 +1,142 @@
-import { useState, useEffect } from 'react';
-import { Box, Drawer, AppBar, Toolbar, Typography, IconButton, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Avatar, Badge } from '@mui/material';
-import { Menu as MenuIcon, Chat as ChatIcon, VideoCall as VideoCallIcon, People as PeopleIcon, Logout as LogoutIcon, Settings as SettingsIcon } from '@mui/icons-material';
+import { useState } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import {
+    AppBar,
+    Box,
+    Drawer,
+    IconButton,
+    List,
+    ListItem,
+    ListItemIcon,
+    ListItemText,
+    Toolbar,
+    Typography,
+    Avatar,
+    Menu,
+    MenuItem,
+    Divider,
+    useTheme,
+} from '@mui/material';
+import {
+    Chat as ChatIcon,
+    People as PeopleIcon,
+    Settings as SettingsIcon,
+    Menu as MenuIcon,
+    VideoCall as VideoCallIcon,
+} from '@mui/icons-material';
 import { useAuth } from '../hooks/useAuth';
-import { useLocation, useNavigate } from 'react-router-dom';
-import NotificationMenu from './NotificationMenu';
-import { useNotifications } from '../hooks/useNotifications';
+import ChatPage from '../pages/ChatPage';
+import ContactsPage from '../pages/ContactsPage';
+import SettingsPage from '../pages/SettingsPage';
+import VideoCallPage from '../pages/VideoCallPage';
 
 const drawerWidth = 240;
 
-// Badge components for navigation items
-const ChatBadge = ({ icon }) => {
-    const { unreadCount } = useNotifications();
-    return (
-        <Badge badgeContent={unreadCount} color="error" overlap="circular">
-            {icon}
-        </Badge>
-    );
-};
-
-const CallsBadge = ({ icon }) => {
-    const { missedCalls = 0 } = useNotifications();
-    return (
-        <Badge badgeContent={missedCalls} color="error" overlap="circular">
-            {icon}
-        </Badge>
-    );
-};
-
-export default function MainLayout({ children }) {
+export default function MainLayout() {
+    const theme = useTheme();
     const { user, logout } = useAuth();
-    const [mobileOpen, setMobileOpen] = useState(false);
-    const location = useLocation();
     const navigate = useNavigate();
-    const [activePage, setActivePage] = useState('chat');
-
-    // Set active page based on current route
-    useEffect(() => {
-        const path = location.pathname.split('/')[1] || 'chat';
-        setActivePage(path);
-    }, [location]);
+    const location = useLocation();
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [anchorEl, setAnchorEl] = useState(null);
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
     };
 
-    const navigateTo = (page) => {
-        navigate(`/${page}`);
-        setMobileOpen(false);
+    const handleProfileClick = (event) => {
+        setAnchorEl(event.currentTarget);
     };
 
-    // Main navigation items
-    const navItems = [
-        { id: 'chat', label: 'Chat', icon: <ChatIcon /> },
-        { id: 'calls', label: 'Calls', icon: <VideoCallIcon /> },
-        { id: 'contacts', label: 'Contacts', icon: <PeopleIcon /> },
-        { id: 'settings', label: 'Settings', icon: <SettingsIcon /> },
+    const handleProfileClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleLogout = () => {
+        handleProfileClose();
+        logout();
+    };
+
+    const menuItems = [
+        { text: 'Chat', icon: <ChatIcon />, path: '/' },
+        { text: 'Contacts', icon: <PeopleIcon />, path: '/contacts' },
+        { text: 'Video Call', icon: <VideoCallIcon />, path: '/video-call' },
+        { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
     ];
 
     const drawer = (
-        <Box>
-            <Toolbar sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 2 }}>
-                <Typography variant="h6" component="div">
-                    Teams Clone
-                </Typography>
-            </Toolbar>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
+                component="img"
+                src="/teams-clone-logo.svg"
+                sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 1,
+                    display: 'block'
+                }}
+            />
+            <Typography variant="h6" noWrap>
+                Teams Clone
+            </Typography>
+        </Box>
             <Divider />
-            {user && (
-                <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 2 }}>
-                    <Avatar alt={user.name} src={user.picture} sx={{ mr: 2 }} />
-                    <Box>
-                        <Typography variant="subtitle1" noWrap>
-                            {user.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" noWrap>
-                            {user.email}
-                        </Typography>
-                    </Box>
-                </Box>
-            )}
-            <Divider />
-            <List>
-                {navItems.map((item) => (
-                    <ListItem key={item.id} disablePadding>
-                        <ListItemButton
-                            selected={activePage === item.id}
-                            onClick={() => navigateTo(item.id)}
-                        >                            <ListItemIcon>
-                                {item.id === 'chat' ? (
-                                    <ChatBadge icon={item.icon} />
-                                ) : item.id === 'calls' ? (
-                                    <CallsBadge icon={item.icon} />
-                                ) : item.icon}
-                            </ListItemIcon>
-                            <ListItemText primary={item.label} />
-                        </ListItemButton>
+            <List sx={{ flex: 1 }}>
+                {menuItems.map((item) => (
+                    <ListItem
+                        button
+                        key={item.text}
+                        onClick={() => {
+                            navigate(item.path);
+                            setMobileOpen(false);
+                        }}
+                        selected={location.pathname === item.path}
+                        sx={{
+                            borderRadius: 1,
+                            mx: 1,
+                            my: 0.5,
+                        }}
+                    >
+                        <ListItemIcon sx={{ color: location.pathname === item.path ? 'primary.main' : 'inherit' }}>
+                            {item.icon}
+                        </ListItemIcon>
+                        <ListItemText primary={item.text} />
                     </ListItem>
                 ))}
             </List>
             <Divider />
             <List>
-                <ListItem disablePadding>
-                    <ListItemButton onClick={logout}>
-                        <ListItemIcon>
-                            <LogoutIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Logout" />
-                    </ListItemButton>
+                <ListItem
+                    button
+                    onClick={handleProfileClick}
+                    sx={{ p: 2 }}
+                >
+                    <ListItemIcon>
+                        <Avatar src={user?.picture} alt={user?.name} />
+                    </ListItemIcon>
+                    <ListItemText
+                        primary={user?.name}
+                        secondary={user?.email}
+                        primaryTypographyProps={{ noWrap: true }}
+                        secondaryTypographyProps={{ noWrap: true }}
+                    />
                 </ListItem>
             </List>
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleProfileClose}
+                anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+                transformOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                }}
+            >
+                <MenuItem onClick={handleLogout}>Logout</MenuItem>
+            </Menu>
         </Box>
     );
 
@@ -116,8 +145,11 @@ export default function MainLayout({ children }) {
             <AppBar
                 position="fixed"
                 sx={{
-                    width: { sm: `calc(100% - ${drawerWidth}px)` },
+                    display: { sm: 'none' },
                     ml: { sm: `${drawerWidth}px` },
+                    boxShadow: 'none',
+                    borderBottom: `1px solid ${theme.palette.divider}`,
+                    backgroundColor: theme.palette.background.paper,
                 }}
             >
                 <Toolbar>
@@ -129,10 +161,10 @@ export default function MainLayout({ children }) {
                         sx={{ mr: 2, display: { sm: 'none' } }}
                     >
                         <MenuIcon />
-                    </IconButton>                    <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-                        {navItems.find(item => item.id === activePage)?.label || 'Teams Clone'}
+                    </IconButton>
+                    <Typography variant="h6" noWrap component="div" color="text.primary">
+                        Teams Clone
                     </Typography>
-                    <NotificationMenu />
                 </Toolbar>
             </AppBar>
             <Box
@@ -148,7 +180,11 @@ export default function MainLayout({ children }) {
                     }}
                     sx={{
                         display: { xs: 'block', sm: 'none' },
-                        '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+                        '& .MuiDrawer-paper': {
+                            boxSizing: 'border-box',
+                            width: drawerWidth,
+                            borderRight: `1px solid ${theme.palette.divider}`,
+                        },
                     }}
                 >
                     {drawer}
@@ -157,7 +193,12 @@ export default function MainLayout({ children }) {
                     variant="permanent"
                     sx={{
                         display: { xs: 'none', sm: 'block' },
-                        '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+                        '& .MuiDrawer-paper': {
+                            boxSizing: 'border-box',
+                            width: drawerWidth,
+                            borderRight: `1px solid ${theme.palette.divider}`,
+                            backgroundColor: theme.palette.background.paper,
+                        },
                     }}
                     open
                 >
@@ -171,14 +212,17 @@ export default function MainLayout({ children }) {
                     p: 0,
                     width: { sm: `calc(100% - ${drawerWidth}px)` },
                     height: '100vh',
-                    display: 'flex',
-                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    bgcolor: 'background.default',
                 }}
             >
-                <Toolbar />
-                <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-                    {children}
-                </Box>
+                <Toolbar sx={{ display: { sm: 'none' } }} />
+                <Routes>
+                    <Route path="/" element={<ChatPage />} />
+                    <Route path="/contacts" element={<ContactsPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/video-call" element={<VideoCallPage />} />
+                </Routes>
             </Box>
         </Box>
     );

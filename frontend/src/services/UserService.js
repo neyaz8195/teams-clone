@@ -6,9 +6,7 @@ export class UserService {
     }    // Get all users
     async getUsers() {
         try {
-            console.log('UserService: Fetching all users with token available:', !!this.api.token);
             const users = await this.api.get('/api/users');
-            console.log('UserService: Users fetch successful:', users.length);
             return users;
         } catch (error) {
             console.error('Error fetching users:', error);
@@ -47,9 +45,7 @@ export class UserService {
     }    // Get user contacts
     async getContacts() {
         try {
-            console.log('UserService: Fetching contacts with token available:', !!this.api.token);
             const contacts = await this.api.get('/api/users/contacts');
-            console.log('UserService: Contacts fetch successful:', contacts.length);
             return contacts;
         } catch (error) {
             console.error('Error fetching contacts:', error);

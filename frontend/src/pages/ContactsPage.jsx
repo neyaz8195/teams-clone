@@ -23,7 +23,6 @@ import {
     Tooltip,
     CircularProgress
 } from '@mui/material';
-import TokenTester from '../components/TokenTester';
 import {
     Search as SearchIcon,
     PersonAdd as PersonAddIcon,
@@ -61,20 +60,13 @@ export default function ContactsPage() {
     });    // Initialize services
     useEffect(() => {
         if (user) {
-            // Log authentication details for debugging
-            console.log("Auth user object:", user);
-            console.log("Token available:", !!user.token);
-
             // Try to get token from localStorage as fallback
             const lsToken = localStorage.getItem('access_token');
-            console.log("localStorage token available:", !!lsToken);
 
             // Use token from user object or localStorage
             const tokenToUse = user.token || lsToken;
 
             if (tokenToUse) {
-                console.log("Using token:", tokenToUse.substring(0, 10) + "...");
-
                 // Set the token on the singleton apiService instance
                 apiService.setToken(tokenToUse);
 
@@ -93,19 +85,14 @@ export default function ContactsPage() {
             const fetchData = async () => {
                 // Test the token first with session endpoint
                 try {
-                    console.log("Testing API session before loading data...");
                     const sessionResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/session`, {
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('access_token')}`
                         }
                     });
-
-                    console.log("Session test response status:", sessionResponse.status);
                     if (!sessionResponse.ok) {
                         throw new Error(`Session check failed: ${sessionResponse.status}`);
                     }
-
-                    console.log("Session test successful");
 
                     // Now load the actual data
                     await loadContacts();
@@ -234,12 +221,7 @@ export default function ContactsPage() {
         <Box sx={{ p: 3, maxWidth: '800px', mx: 'auto' }}>
             <Typography variant="h4" component="h1" gutterBottom>
                 Contacts
-            </Typography>
-
-            {/* Token diagnostic tool */}
-            <TokenTester />
-
-            {/* Search bar */}
+            </Typography>            {/* Search bar */}
             <TextField
                 fullWidth
                 variant="outlined"

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="512" height="512" rx="128" fill="#4A5FE6"/>
+    
+    <!-- Chat bubble -->
+    <path d="M 156,236 
+             C 156,178 203,130 261,130 
+             L 371,130 
+             C 429,130 476,178 476,236 
+             L 476,276 
+             C 476,334 429,382 371,382 
+             L 341,382 
+             L 291,432 
+             C 287,436 279,433 279,427 
+             L 279,382
+             L 261,382 
+             C 203,382 156,334 156,276 
+             Z" 
+          fill="#FFFFFF"/>
+    
+    <!-- Small person icon -->
+    <circle cx="316" cy="256" r="35" fill="#4A5FE6"/>
+    <path d="M 266,346 
+             C 266,318 288,305 316,305 
+             C 344,305 366,318 366,346" 
+          stroke="#4A5FE6" 
+          stroke-width="35" 
+          stroke-linecap="round"/>
+          
+    <!-- Large person icon -->
+    <circle cx="156" cy="256" r="120" fill="#7C8CF8" opacity="0.9"/>
+    <circle cx="156" cy="216" r="40" fill="#FFFFFF"/>
+    <path d="M 96,336 
+             C 96,294 122,276 156,276 
+             C 190,276 216,294 216,336" 
+          fill="#FFFFFF"/>
+</svg>
