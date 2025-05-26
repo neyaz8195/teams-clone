@@ -10,7 +10,8 @@ import UserService from '../services/UserService';
 export default function ChatPage() {
     const { user, token } = useAuth();
     const { socket, isUserOnline } = useSocket();
-    const [contacts, setContacts] = useState([]);
+    const [allUsers, setAllUsers] = useState([]);
+    const [recentChats, setRecentChats] = useState([]);
     const [selectedContact, setSelectedContact] = useState(null);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
@@ -41,23 +42,35 @@ export default function ChatPage() {
                 setUserService(userSvc);
             });
         }
-    }, [socket, token]);    // Load users
+    }, [socket, token]);    // Load users and recent chats
     useEffect(() => {
-        if (userService) {
-            const loadUsers = async () => {
+        if (userService && chatService) {
+            const loadData = async () => {
                 try {
-                    const allUsers = await userService.getUsers();
-                    // Filter out the current user
-                    const otherUsers = allUsers.filter(u => u.auth0Id !== user?.userId);
-                    setContacts(otherUsers);
+                    // Load all users
+                    const users = await userService.getUsers();
+                    const otherUsers = users.filter(u => u.auth0Id !== user?.userId);
+                    setAllUsers(otherUsers);
+
+                    // Get list of users with chat history
+                    const recentChatsResponse = await chatService.getRecentChats();
+                    const usersWithChats = recentChatsResponse.map(chat => {
+                        const userInfo = otherUsers.find(u => u.auth0Id === chat.userId);
+                        return {
+                            ...userInfo,
+                            lastMessage: chat.lastMessage,
+                            lastMessageTime: chat.timestamp
+                        };
+                    });
+                    setRecentChats(usersWithChats);
                 } catch (error) {
-                    console.error('Failed to load users:', error);
+                    console.error('Failed to load users or recent chats:', error);
                 }
             };
 
-            loadUsers();
+            loadData();
         }
-    }, [userService, user?.userId]);
+    }, [userService, chatService, user?.userId]);
 
     // Load messages for selected contact
     useEffect(() => {
@@ -195,12 +208,13 @@ export default function ChatPage() {
                 }}
                 elevation={0}
                 variant="outlined"
-            >
-                <Typography variant="h6" sx={{ p: 2 }}>
-                    Contacts
-                </Typography>
+            >                <Box sx={{ p: 2 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Messages
+                    </Typography>
+                </Box>
                 <List>
-                    {contacts.map((contact) => (
+                    {allUsers.map((contact) => (
                         <ListItem
                             key={contact.auth0Id}
                             button
